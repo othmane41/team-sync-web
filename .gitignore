@@ -1,0 +1,8 @@
+team-sync-web
+*.app/
+*.dmg
+macos/TeamSync
+macos/AppIcon.icns
+macos/AppIcon.iconset/
+.dmg-staging/
+.DS_Store
