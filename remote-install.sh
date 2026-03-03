@@ -4,7 +4,7 @@
 set -e
 
 APP_NAME="Dynamic Horizon Sync"
-REPO="https://github.com/dynamic-horizon/team-sync-web.git"
+REPO="https://github.com/othmane41/team-sync-web.git"
 INSTALL_DIR="/Applications"
 BUILD_DIR=$(mktemp -d)
 
