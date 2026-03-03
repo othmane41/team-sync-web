@@ -133,6 +133,85 @@ ok "Installed to ${INSTALL_DIR}/${APP_NAME}.app"
 mkdir -p "$HOME/.dh-sync"
 ok "Config directory: ~/.dh-sync/"
 
+# ── SSH Setup ───────────────────────────────────────────────
+log "Setting up SSH..."
+
+# 1. Generate SSH key if not present
+SSH_KEY="$HOME/.ssh/id_ed25519"
+if [ ! -f "$SSH_KEY" ]; then
+    log "Generating SSH key..."
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    ssh-keygen -t ed25519 -f "$SSH_KEY" -N "" -C "$(whoami)@$(hostname)"
+    ok "SSH key created: $SSH_KEY"
+else
+    ok "SSH key already exists: $SSH_KEY"
+fi
+
+# 2. Enable Remote Login (macOS SSH server)
+if systemsetup -getremotelogin 2>/dev/null | grep -qi "on"; then
+    ok "Remote Login already enabled"
+else
+    echo ""
+    echo -e "  ${BOLD}Remote Login (SSH server) must be enabled${NC}"
+    echo "  so that other machines can connect to yours."
+    echo ""
+    read -p "  Enable Remote Login now? (requires admin password) [Y/n] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        sudo systemsetup -setremotelogin on
+        ok "Remote Login enabled"
+    else
+        echo -e "  ${RED}⚠${NC}  Skipped. Enable manually: System Settings → General → Sharing → Remote Login"
+    fi
+fi
+
+# 3. Show local IP for teammates
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "unknown")
+echo ""
+echo -e "  ${BOLD}Your local IP:${NC} $LOCAL_IP"
+echo -e "  ${BOLD}Your username:${NC} $(whoami)"
+echo ""
+echo -e "  Share this with your teammates so they can add your machine:"
+echo -e "    ${BOLD}$(whoami)@${LOCAL_IP}${NC}"
+echo ""
+
+# 4. Send SSH key to collaborators
+echo -e "${BOLD}  ── Send your SSH key to teammates ──${NC}"
+echo ""
+echo "  Enter the IP addresses of your teammates (one per line)."
+echo "  Leave empty and press Enter when done."
+echo ""
+
+while true; do
+    read -p "  Teammate IP (or Enter to skip): " PEER_IP
+    [ -z "$PEER_IP" ] && break
+
+    read -p "  Username on $PEER_IP [$(whoami)]: " PEER_USER
+    PEER_USER="${PEER_USER:-$(whoami)}"
+
+    read -p "  SSH port for $PEER_IP [22]: " PEER_PORT
+    PEER_PORT="${PEER_PORT:-22}"
+
+    echo -e "  Sending key to ${BOLD}${PEER_USER}@${PEER_IP}:${PEER_PORT}${NC}..."
+    echo "  (You may be asked for ${PEER_USER}'s password on that machine)"
+    echo ""
+
+    if ssh-copy-id -p "$PEER_PORT" "${PEER_USER}@${PEER_IP}" 2>/dev/null; then
+        ok "Key sent to ${PEER_USER}@${PEER_IP}"
+    else
+        PUB_KEY=$(cat "${SSH_KEY}.pub")
+        if ssh -p "$PEER_PORT" -o StrictHostKeyChecking=accept-new \
+            "${PEER_USER}@${PEER_IP}" \
+            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${PUB_KEY}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys" 2>/dev/null; then
+            ok "Key sent to ${PEER_USER}@${PEER_IP} (manual)"
+        else
+            echo -e "  ${RED}⚠${NC}  Failed to send key to ${PEER_USER}@${PEER_IP}"
+            echo "     Try manually: ssh-copy-id -p ${PEER_PORT} ${PEER_USER}@${PEER_IP}"
+        fi
+    fi
+    echo ""
+done
+
 # ── Done ─────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}  ✓ Installation complete!${NC}"
