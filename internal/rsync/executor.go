@@ -78,9 +78,9 @@ func (e *Executor) buildArgs(transfer *models.Transfer, machine *models.Machine)
 	sshCmd := fmt.Sprintf("ssh -p %d -o BatchMode=yes -o StrictHostKeyChecking=accept-new", machine.Port)
 
 	args := []string{
-		"-avz",
-		"--info=progress2",
-		"--no-inc-recursive",
+		"-rlptDvz",
+		"--progress",
+		"--rsync-path", e.RsyncBin,
 		"-e", sshCmd,
 	}
 

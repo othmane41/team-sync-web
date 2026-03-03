@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
@@ -17,8 +18,25 @@ func DefaultConfig() *Config {
 	return &Config{
 		Port:     8080,
 		DataDir:  filepath.Join(home, ".dh-sync"),
-		RsyncBin: "rsync",
+		RsyncBin: findRsync(),
 	}
+}
+
+// findRsync returns the absolute path to a modern rsync (3.x+).
+// It prefers the Homebrew version over the outdated macOS system rsync.
+func findRsync() string {
+	for _, path := range []string{
+		"/opt/homebrew/bin/rsync",
+		"/usr/local/bin/rsync",
+	} {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	if p, err := exec.LookPath("rsync"); err == nil {
+		return p
+	}
+	return "rsync"
 }
 
 func Load() (*Config, error) {

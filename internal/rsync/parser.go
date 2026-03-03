@@ -7,7 +7,7 @@ import (
 	"team-sync-web/internal/models"
 )
 
-// ParseProgress parses a line from rsync --info=progress2 output.
+// ParseProgress parses a line from rsync --progress output.
 // Example: "  1,234,567  45%  12.34MB/s    0:01:23 (xfr#5, to-chk=10/20)"
 var progressRe = regexp.MustCompile(
 	`^\s*([\d,]+)\s+(\d+)%\s+(\S+/s)\s+(\S+)\s*(?:\(xfr#(\d+),\s*to-chk=(\d+)/(\d+)\))?`,
